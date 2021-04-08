@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 public enum TurnPhases {START,PLAYERTURN,ENEMYTURN,WON,LOST }
 public class CombatSystem : MonoBehaviour {
     public Button attackBtn, defendBtn, storeBtn, ultBtn;
@@ -11,6 +12,7 @@ public class CombatSystem : MonoBehaviour {
     public GameObject player;
     public GameObject enemy;
     public Text storeResponseTxt;
+    public int EnemyNum;
     
     Unit playerUnit;
     Unit enemyUnit;
@@ -29,12 +31,16 @@ public class CombatSystem : MonoBehaviour {
     // Start is called before the first frame update
     void Start()
     {
+
+       
         StoreCanvas.enabled = false;
+
         UltSlider.maxValue = 10;
         UltSlider.minValue = 0;
         UltSlider.value = 0;
         state = TurnPhases.START;
         StartCoroutine(SetupBattle());
+      
 
     }
     private void Update()
@@ -51,7 +57,27 @@ public class CombatSystem : MonoBehaviour {
     {
         playerUnit = player.GetComponent<Unit>();
         enemyUnit = enemy.GetComponent<Unit>();
-        dbText.text = " A wounded " + playerUnit.name + " approaches!";
+        if (playerUnit.unitLevel>=PlayerPrefs.GetInt("PlayerLvl"))
+        {
+            PlayerPrefs.SetString("Enemy" + EnemyNum, "Defeated");
+            PlayerPrefs.SetInt("MaxHP", playerUnit.maxHP + 2);
+            PlayerPrefs.SetInt("Damage", playerUnit.damage);
+            PlayerPrefs.SetInt("UltDamage", playerUnit.UltDamage);
+            PlayerPrefs.SetInt("PlayerLvl", playerUnit.unitLevel);
+            PlayerPrefs.SetInt("CurrentHP", playerUnit.currentHp);
+
+        }
+        else
+        {
+            playerUnit.unitLevel = PlayerPrefs.GetInt("PlayerLvl");
+            playerUnit.UltDamage = PlayerPrefs.GetInt("UltDamage");
+            playerUnit.maxHP = PlayerPrefs.GetInt("MaxHP");
+            playerUnit.damage = PlayerPrefs.GetInt("Damage");
+            playerUnit.currentHp = PlayerPrefs.GetInt("CurrentHP");
+
+        }
+       
+        dbText.text = " A wild " + enemyUnit.name + " approaches!";
         playerHud.setHud(playerUnit);
         enemyHud.setHud(enemyUnit);
         yield return new WaitForSeconds(2f);
@@ -100,11 +126,12 @@ public class CombatSystem : MonoBehaviour {
         StoreCanvas.enabled = false;
         dbText.text = "Consuming Healing Potion... +5HP!";
         yield return new WaitForSeconds(2f);
+        dbText.text = "Choose an Action.";
         playerUnit.currentHp += 5;
         playerHud.setHud(playerUnit);
         storePoints.text = "UP: " + ultPts;
-        state = TurnPhases.ENEMYTURN;
-        StartCoroutine(EnemyTurn());
+       // state = TurnPhases.ENEMYTURN;
+     //   StartCoroutine(EnemyTurn());
 
 
     }
@@ -396,13 +423,27 @@ public class CombatSystem : MonoBehaviour {
     {
         if (state == TurnPhases.WON)
         {
+            PlayerPrefs.SetString("Enemy"+EnemyNum,"Defeated");
+            PlayerPrefs.SetInt("MaxHP",PlayerPrefs.GetInt("MaxHP")+2);
+            PlayerPrefs.SetInt("Damage", PlayerPrefs.GetInt("Damage") + 1);
+            PlayerPrefs.SetInt("UltDamage", PlayerPrefs.GetInt("UltDamage")+1);
+            PlayerPrefs.SetInt("PlayerLvl", PlayerPrefs.GetInt("PlayerLvl") + 1);
+            PlayerPrefs.SetInt("CurrentHP",playerUnit.currentHp);
             dbText.text = enemyUnit.name + " has fallen in battle! You reign victorious!";
+
+            StartCoroutine(scenewait());
+            SceneManager.LoadScene(0);
         } else if (state==TurnPhases.LOST) 
         {
             dbText.text = "You have Fallen in battle.";
         }
     
     
+    }
+    IEnumerator scenewait() 
+    {
+
+        yield return new WaitForSeconds(3f);
     }
 }
     // Update is called once per frame
